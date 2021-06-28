@@ -16,3 +16,7 @@
 
 # Compiled Binary for the name of the project
 fileRenamerCli
+
+# Test files
+testFiles
+.DS_Store

@@ -15,6 +15,15 @@ type CLIFlag struct {
 	parser    func([]string) (renamer.Renamer, error)
 }
 
+type ParseResult struct {
+	ops                   *[]renamer.Renamer
+	directory             string
+	includeExtension      bool
+	preview               bool
+	includeDirectories    bool
+	includeSubDirectories bool
+}
+
 // Can Throw errors
 func checkAndParseTrimLeftFlag(args []string) (renamer.Renamer, error) {
 	argsLength := len(args)
@@ -175,7 +184,18 @@ func checkAndParseCounterFlag(args []string) (renamer.Renamer, error) {
 	return renamer.NewCounter(i1, i2, i3), nil
 }
 
-func ParseCommandLineArgs(args []string) ([]renamer.Renamer, error) {
+func ParseCommandLineArgs(args []string) (ParseResult, error) {
+	ops := make([]renamer.Renamer, 0)
+
+	res := ParseResult{
+		&ops,
+		"",
+		false,
+		false,
+		false,
+		false,
+	}
+
 	flagMap := map[string]CLIFlag{
 		"-tl": {"-tl", 1, checkAndParseTrimLeftFlag},    // TrimLeft
 		"-tr": {"-tr", 1, checkAndParseTrimRightFlag},   // TrimRight
@@ -186,49 +206,67 @@ func ParseCommandLineArgs(args []string) ([]renamer.Renamer, error) {
 		"-r":  {"-r", 2, checkAndParseReplaceFlag},      // Replacer
 		"-il": {"-il", 2, checkAndParseInsertLeftFlag},  // InsertLeft
 		"-ir": {"-ir", 2, checkAndParseInsertRightFlag}, // InsertRight
-		"-c":  {"-ir", 3, checkAndParseCounterFlag},     // Counter
+		"-c":  {"-c", 3, checkAndParseCounterFlag},      // Counter
 	}
 
-	ops := make([]renamer.Renamer, 0)
 	argsLength := len(args)
 
 	index := 1
 
 	for index < argsLength {
-		flagVal, prs := flagMap[args[index]]
+		flagVal, present := flagMap[args[index]]
 
+		// Getting the input
 		if args[index] == "-i" {
-			// 	argQuant, prs := flagMap["-i"]
+			if argsLength < index+2 {
+				err := "invalid parameters for -i"
+				return res, errors.New(err)
+			}
 
-			// 	if !prs {
-			// 		return ops, errors.New("invalid flag: -i")
-			// 	}
+			slice := args[index+1]
 
-			// 	slice := args[index+1 : index+1+argQuant]
-			// 	fmt.Println(slice)
+			res.directory = slice
 
 			index += 2
-		} else if prs {
+		} else if args[index] == "-p" {
+			// Getting the preview flag
+			res.preview = true
+			index++
+		} else if args[index] == "-ie" {
+			// Getting the Include extensions flag
+			res.includeExtension = true
+			index++
+		} else if args[index] == "-id" {
+			// Getting the Include directories flag
+			res.includeDirectories = true
+			index++
+		} else if args[index] == "-is" {
+			// Getting the Include sub directories flag
+			res.includeSubDirectories = true
+			index++
+		} else if present {
+			// Getting the renamer Ops
 			if argsLength < index+flagVal.argParams+1 {
 				err := fmt.Sprintf("invalid parameters for %v", flagVal.flag)
-				return ops, errors.New(err)
+				return res, errors.New(err)
 			}
 
 			slicedArgs := args[index+1 : index+1+flagVal.argParams]
 			op, er := flagVal.parser(slicedArgs)
 
 			if er != nil {
-				return ops, er
+				return res, er
 			}
 
 			ops = append(ops, op)
 
 			index += flagVal.argParams + 1
+			// If we get here, the user has failed
 		} else {
-			err := fmt.Sprintf("Uknonwn Parameter %v", args[index])
-			return ops, errors.New(err)
+			err := fmt.Sprintf("Unknown Parameter %v", args[index])
+			return res, errors.New(err)
 		}
 	}
 
-	return ops, nil
+	return res, nil
 }

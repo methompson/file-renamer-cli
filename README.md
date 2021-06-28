@@ -36,6 +36,9 @@ Once built, the program uses command line flags to add set arguments and values.
 
 ### -i Folder Path Input
 
+Arguments:
+* Folder Path
+
 This command accepts a single argument, a path to a folder containing the files you want to rename. Whatever path you set, all files in that folder will be renamed when the utility is run.
 
 ### -p Preview
